@@ -1,0 +1,204 @@
+"""
+Created on Wed Mar 17 18:23:28 2021
+
+@author: Anton
+"""
+
+import numpy as np
+import time
+import matplotlib.pyplot as pp
+import math as m1
+
+
+def ReductionGauss(Aaug):
+    n, m = np.shape(Aaug)
+    for k in range(0, n-1):
+        for i in range(k+1, n):
+            gik = Aaug[i, k] / Aaug[k, k]
+            Aaug[i, :] = Aaug[i, :] - gik*Aaug[k, :]
+    return Aaug
+
+
+def ResolutionSystTriSup(Aaug):
+    n, m = np.shape(Aaug)
+    x = np.zeros(n)
+    if m != m+1:
+        x = np.zeros(n)
+    for i in range(n-1, -1, -1):
+        s = 0
+        for k in range(i+1, n):
+            s += x[k]*Aaug[i, k]
+        x[i] = (Aaug[i, n] - s) / Aaug[i, i]
+    return x
+
+
+def Gauss(A, B):
+    Aaug = np.column_stack([A, B])
+    Taug = ReductionGauss(Aaug)
+    X = ResolutionSystTriSup(Taug)
+    print('matrice augmenté: ', Aaug)
+    print('matrice réduite : ', Taug)
+    return X
+
+
+def DecompositionLU(A):
+    gik_val = []
+    n, m = np.shape(A)
+    for k in range(0, n-1):
+        for i in range(k+1, n):
+            gik = A[i, k] / A[k, k]
+            gik_val.append(gik)
+            A[i, :] = A[i, :] - gik*A[k, :]
+    U = A
+    print("Upper : ", "\n",  U, "\n")
+    L = np.zeros((n, n))
+    n, m = np.shape(A)
+    k = 0
+    for i in range(0, n):
+        L[i, k] = gik_val[i] / gik_val[i]
+        k += 1
+    line = 0
+    for k in range(0, n-1):
+        for i in range(k+1, n):
+            L[i, k] = gik_val[line]
+            line += 1
+    print("Lower :", "\n", L, "\n")
+    return L, U
+
+
+def ResolutionLU(L, U, B):
+    Y = Gauss(L, B)
+    X = Gauss(U, Y)
+    return X
+
+
+def GaussChoixPivotPartiel(A, B):
+    Aaug = np.column_stack((A, B))
+    Aaug = np.copy(Aaug)
+    n, m = Aaug.shape
+    g = 0
+    for i in range(0, n-1):
+        for j in range(i+1, n):
+            if abs(Aaug[j, i]) > abs(Aaug[i, i]):
+                T = np.copy(Aaug[j, :])
+                Aaug[j, :] = Aaug[i, :]
+                Aaug[i, :] = T
+        if Aaug[i, i] != 0:
+            for k in range(i+1, n):
+                g = (Aaug[k, i] / Aaug[i, i])
+                Aaug[k, :] = (Aaug[k, :] - (g*Aaug[i, :]))
+    print("Taug=", Aaug)
+    print("")
+    X = ResolutionSystTriSup(Aaug)
+    return(X)
+
+
+def GaussChoixPivotTotal(A, B):
+    Aaug = np.column_stack([A, B])
+    n, m = np.shape(Aaug)
+    q = 0
+    if m != n+1:
+        print("La matrice entrée n'est pas augmentée")
+    else:
+        for i in range(m-1):
+            for k in range(i+1, m-1):
+                for j in range(k, m-1):
+                    if abs(Aaug[j, i]) > abs(Aaug[i, i]):
+                        L0 = np.copy(Aaug[i, :])
+                        Aaug[i, :] = Aaug[j, :]
+                        Aaug[j, :] = L0
+                if Aaug[i, i] == 0:
+                    print("Le pivot est nul")
+                q = Aaug[k, i] / Aaug[i, i]
+                Aaug[k, :] = Aaug[k, :] - q*Aaug[i, :]
+    X = ResolutionSystTriSup(Aaug)
+    return X
+
+
+def courbe1():
+    x = []
+    y = []
+    y0 = []
+    y1 = []
+    y2 = []
+    for i in range(100, 800, 50):
+        A = np.random.rand(i, i)
+        B = np.random.rand(i, 1)
+        time_init = time.time()
+        Gauss(A, B)
+        time_end = time.time()
+        temps = time_end - time_init
+
+        time_init0 = time.time()
+        [L, U] = DecompositionLU(A)
+        ResolutionLU(L, U, B)
+        time_end0 = time.time()
+        temps0 = time_end0 - time_init0
+
+        time_init1 = time.time()
+        GaussChoixPivotPartiel(A, B)
+        time_end1 = time.time()
+        temps1 = time_end1 - time_init1
+
+        time_init2 = time.time()
+        GaussChoixPivotTotal(A, B)
+        time_end2 = time.time()
+        temps2 = time_end2 - time_init2
+
+        x.append(i)
+        y.append(temps)
+        y0.append(temps0)
+        y1.append(temps1)
+        y2.append(temps2)
+    pp.plot(x, y, label='Gauss')
+    pp.plot(x, y0, label='Resolution LU')
+    pp.plot(x, y1, label='Pivot Partiel')
+    pp.plot(x, y2, label='Pivot Total')
+    pp.title("Temps de calcul en fonction de la dimension")
+    pp.xlabel("Dimension")
+    pp.ylabel("Temps en sec")
+    pp.legend()
+    pp.show()
+
+
+def courbe2():
+    x = []
+    y = []
+    y1 = []
+    y2 = []
+    y3 = []
+    for i in range(100, 450, 10):
+        A = np.array(np.random.random(size=(i, i)))
+        B = np.array(np.random.random(size=(i, 1)))
+        C = np.copy(A)
+
+        a = Gauss(A, B)
+        erreur = np.linalg.norm(A@a - np.ravel(B))
+
+        L, U = DecompositionLU(A)
+        b = ResolutionLU(L, U, B)
+        erreur1 = np.linalg.norm(C@b - np.ravel(B))
+
+        c = GaussChoixPivotPartiel(A, B)
+        erreur2 = np.linalg.norm(A@c - np.ravel(B))
+
+        d = GaussChoixPivotTotal(A, B)
+        erreur3 = np.linalg.norm(A@d - np.ravel(B))
+
+        x.append(i)
+        y.append(m1.log(erreur))
+        y1.append(m1.log(erreur1))
+        y2.append(m1.log(erreur2))
+        y3.append(m1.log(erreur3))
+    pp.plot(x, y, label='Gauss')
+    pp.plot(x, y1, label='LU')
+    pp.plot(x, y2, label='Pivot Partiel')
+    pp.plot(x, y3, Label='Pivot Total')
+    pp.title("log(||AX -B||) en fonction de la dimension")
+    pp.xlabel("Dimension")
+    pp.ylabel("Erreur")
+    pp.legend()
+    pp.show()
+
+
+courbe2()
